@@ -1,0 +1,371 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/shanemhansen/ballclock/clock.go</option>
+				
+				<option value="file1">github.com/shanemhansen/ballclock/clock2.go</option>
+				
+				<option value="file2">github.com/shanemhansen/ballclock/clock3.go</option>
+				
+				<option value="file3">github.com/shanemhansen/ballclock/permutation.go</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" >// A ballclock represents a set of 3 rungs
+// The first rung represents minutes
+// The second 5 minute increments
+// and the last, 1 hour increments
+// In the general case, the state of a ball clock
+// can be defined as a polynomial using a variable base
+// (10/1, 60/5, 12/1) or (10, 2, 12)
+// We can defined a function t(x1, x2, x3) where
+// t is time in minutes, x1 is minutes, x2 is sets of minutes
+// and x3 is hours. as t(x1, x2, x3) = x1 + 5*x2 + 60*x3
+// where  x1 ∈ [0..9], x2 ∈ [0..11], x3 ∈ [0..11]
+package ballclock
+
+import "errors"
+
+// If you want to run the full 24 hours, you got to have enough balls
+var InvalidClock error = errors.New("Invalid clock, not enough balls!")
+
+//General polynomial type
+type Polynomial []int
+
+// Ballclock is a specific type of polynomial
+type BallClock struct {
+        Polynomial
+        QueueSize     int
+        queue         []int
+        rungs         [][]int
+        pristineQueue []int
+}
+
+// Initializes/Reinitializes a BallClock, use to reset queue, etc.
+func New(template *BallClock) (*BallClock, error) <span class="cov8" title="1">{
+        template.queue = make([]int, template.QueueSize)
+        template.pristineQueue = make([]int, template.QueueSize)
+        for i := 0; i &lt; template.QueueSize; i++ </span><span class="cov8" title="1">{
+                template.queue[i] = i + 1
+        }</span>
+        <span class="cov8" title="1">copy(template.pristineQueue, template.queue)
+        required := 0
+        for _, size := range template.Polynomial </span><span class="cov8" title="1">{
+                required += size
+                template.rungs = append(template.rungs, make([]int, size))
+        }</span>
+        <span class="cov8" title="1">if template.QueueSize &lt; required </span><span class="cov0" title="0">{
+                return nil, InvalidClock
+        }</span>
+        <span class="cov8" title="1">return template, nil</span>
+}
+
+// Determine the Period of a wall clock before
+// the balls go back into original order.
+// this is the "iterateminutes" algo
+func (self *BallClock) Period() int <span class="cov8" title="1">{
+        var i int
+        self.Tick()
+        for i = 1; !self.IsPristine(); i++ </span><span class="cov8" title="1">{
+                self.Tick()
+        }</span>
+        <span class="cov8" title="1">return (i / (24 * 60))</span>
+}
+
+// helper function to dump the state of simulation
+func (self *BallClock) State() ([]int, [][]int) <span class="cov8" title="1">{
+        return self.queue, self.rungs
+}</span>
+
+// Are the balls back in order?
+func (self *BallClock) IsPristine() bool <span class="cov8" title="1">{
+        if len(self.pristineQueue) != len(self.queue) </span><span class="cov8" title="1">{
+                return false
+        }</span>
+        <span class="cov8" title="1">for i, pristine := range self.pristineQueue </span><span class="cov8" title="1">{
+                if self.queue[i] != pristine </span><span class="cov8" title="1">{
+                        return false
+                }</span>
+        }
+        <span class="cov8" title="1">return true</span>
+}
+
+// Fundamental operation to advance the ball clock from
+// State A to state B.
+func (self *BallClock) Tick() <span class="cov8" title="1">{
+        // Simple counting algorithm, with a twist
+        // The base isn't consistantly 2, 16, or even something weird like 10 ; )
+        ball := self.queue[0]
+        self.queue = self.queue[1:]
+        rungnumber := 0
+        for </span><span class="cov8" title="1">{
+                if rungnumber == len(self.rungs) </span><span class="cov8" title="1">{
+                        // Put the ball back in the queue, at the end
+                        self.queue = append(self.queue, ball)
+                        return
+                }</span>
+                <span class="cov8" title="1">arm := self.rungs[rungnumber]
+                // Is there somewhere to put the ball on this rung,
+                // or will it trigger a carry?
+                for i, val := range arm </span><span class="cov8" title="1">{
+                        if val == 0 </span><span class="cov8" title="1">{
+                                // whoo! we found somewhere to put the ball
+                                arm[i] = ball
+                                return
+                        }</span>
+                }
+                // uhoh, nowhere to put the ball
+                // time to carry, loop over rung backwards
+                // empyting it out and placing the results
+                // in the queue
+                <span class="cov8" title="1">for i, _ := range arm </span><span class="cov8" title="1">{
+                        carry := &amp;arm[len(arm)-i-1]
+                        if *carry == 0 </span><span class="cov0" title="0">{
+                                panic("Attempt to carry null (0) ball, something went horribly wrong")
+                        }</span>
+                        <span class="cov8" title="1">self.queue = append(self.queue, *carry)
+                        *carry = 0</span>
+                }
+                // let's try the next arm.. unless we're out of rungs?
+                // good thing there's a check at the top for that,
+                <span class="cov8" title="1">rungnumber++</span>
+        }
+        <span class="cov0" title="0">panic("Shouldn't get here")</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package ballclock
+
+// clock2 holds implementtion of the permuatedays algorithm
+type Day int
+
+var DAY Day = 24 * 60
+
+// Get the period, measured in days (24 hour permutations applied)
+func (self *BallClock) PeriodBySuccessivePermuations() int <span class="cov8" title="1">{
+        vec := self.GetPermutationVector(DAY)
+        i := 1
+        self.queue = Permute(vec, self.queue)
+        for !self.IsPristine() </span><span class="cov8" title="1">{
+                i++
+                self.queue = Permute(vec, self.queue)
+        }</span>
+        <span class="cov8" title="1">return i</span>
+}
+
+// Return a permuted vector representing the
+// changes made to the initial state. by ticks Resets BallClock
+func (self *BallClock) GetPermutationVector(needed_ticks Day) []int <span class="cov8" title="1">{
+        for i := Day(0); i &lt; needed_ticks; i++ </span><span class="cov8" title="1">{
+                self.Tick()
+        }</span>
+        //get permuation vector
+        <span class="cov8" title="1">vec, _ := self.State()
+        if len(vec) != self.QueueSize </span><span class="cov0" title="0">{
+                panic("Number of ticks does not form a permutation")
+        }</span>
+        // Since we numbered the balls starting at 1 in order to leave room for a
+        // sentinal 0 value, we need to adjust our permutation vector
+        <span class="cov8" title="1">for i, _ := range vec </span><span class="cov8" title="1">{
+                vec[i]--
+        }</span>
+        <span class="cov8" title="1">New(self)
+        return vec</span>
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package ballclock
+
+// The solution to the problem now looks like:
+// 1. Model the clock
+// 2. Move the dial forward 24 hours (or 12 if you prefer)
+// 3. Examine the clock state, the queue is a permutation
+//     vector for 24 hours.
+// 4. Write the permutation in factorized form
+// 5. Compute the LCM of the elements of the factorized form
+// 6. Return that as the number of days in the period
+// Algorithmically this is somewhat tricky. The clock operation
+// is actually constant time w/ respect to the size of the queue.
+// it merely requires a fixed set of iterations. O(1). Now
+// with some smarter permutation work involving powers of
+// the permutation we could decrease that constant, but I'll
+// leave that out. This is of course the famouse russion method.
+// Factorizing the permutation using my naive algorithm is
+// probably O(n**2) as a function of queue size.
+// I loop over the permutations, requiring a maximum of one loop
+// per cycle, and there can be up to n cycles in the identity permutation
+// Caclulating the LCM is extremely efficient. It's been shown
+// that euclids famous algorithm runs in logarithmatic time,
+// So that adds O(n*lg n) steps.
+// Enough talking
+func (self *BallClock) PeriodByLCM() int <span class="cov8" title="1">{
+        vec := self.GetPermutationVector(DAY)
+        period := Cycle(vec)
+        return period
+}</span>
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package ballclock
+
+// Permute a vector by the given permutation vector
+// Leaving the original unchanged
+func Permute(permutation, input []int) (output []int) <span class="cov8" title="1">{
+        if len(input) != len(permutation) </span><span class="cov0" title="0">{
+                panic("Permutation and input lengths don't match")
+        }</span>
+        <span class="cov8" title="1">output = make([]int, len(input))
+        for i, k := range permutation </span><span class="cov8" title="1">{
+                output[i] = input[k]
+        }</span>
+        <span class="cov8" title="1">return output</span>
+}
+
+// Return a vector factored into cyclic form
+// (a slice of slices of ints) The basic strategy
+// is to pick a number, follow it until it leads back,
+// the whole time burning the bridge behind us (replacing with -1)
+// When we've destroyed the permutation vector (all -1's), we're done.
+func CyclicForm(p []int) (cycles [][]int) <span class="cov8" title="1">{
+        cycles = make([][]int, 0)
+        permutations := make([]int, len(p))
+        copy(permutations, p)
+        head := permutations[0]
+        cycle := []int{head}
+        next := head
+        marker := -1
+THE_CYCLE:
+        for </span><span class="cov8" title="1">{
+                // find a single cycle, stashing a ref
+                // so that we can clean up after we've
+                // got our next target
+                oldnext := next
+                next = permutations[next]
+                permutations[oldnext] = marker
+                if next == head </span><span class="cov8" title="1">{
+                        // The cycle is complete. Find
+                        // a new starting point if possible
+                        for _, k := range permutations </span><span class="cov8" title="1">{
+                                if k == marker </span><span class="cov8" title="1">{
+                                        continue</span>
+                                }
+                                <span class="cov8" title="1">next = k
+                                head = k
+                                cycles = append(cycles, cycle)
+                                cycle = []int{head}
+                                continue THE_CYCLE</span>
+                        }
+                        // Otherwise let's call it a day
+                        <span class="cov8" title="1">cycles = append(cycles, cycle)
+                        break THE_CYCLE</span>
+                }
+                <span class="cov8" title="1">cycle = append(cycle, next)</span>
+        }
+        <span class="cov8" title="1">return cycles</span>
+}
+
+// return the number of iterations until the input cycles
+// This is known, and by intuitively seems to be the
+// least common multime of the length of all the involved cycles
+func Cycle(permutation []int) int <span class="cov8" title="1">{
+        cycles := CyclicForm(permutation)
+        acc := 1
+        for _, cycle := range cycles </span><span class="cov8" title="1">{
+                acc = lcm(acc, len(cycle))
+        }</span>
+        <span class="cov8" title="1">return acc</span>
+}
+
+// Good old euclidian algorithm for gcd
+// Source: Euclid's elements Books VII and X
+func gcd(a, b int) int <span class="cov8" title="1">{
+        for b != 0 </span><span class="cov8" title="1">{
+                a, b = b, a%b
+        }</span>
+        <span class="cov8" title="1">return a</span>
+}
+
+// and it's closely related cousin least common multiple
+func lcm(a, b int) int <span class="cov8" title="1">{
+        return a * b / gcd(a, b)
+}</span>
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible = document.getElementById('file0');
+		files.addEventListener('change', onChange, false);
+		function onChange() {
+			visible.style.display = 'none';
+			visible = document.getElementById(files.value);
+			visible.style.display = 'block';
+			window.scrollTo(0, 0);
+		}
+	})();
+	</script>
+</html>
