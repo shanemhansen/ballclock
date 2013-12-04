@@ -58,3 +58,5 @@ was put in it's own file. the golang package layout makes this sort of flexible 
 
 I also used the new go cover tool. We've got about [95% test coverage](http://shanemhansen.github.io/ballclock/coverage.html), I augment that with the actual deliverable (bench/main.go)
 which reads the numbers from stdin and outputs the messages.
+
+If you've reached this far, congratulations. Go check out some [documentation](http://godoc.org/github.com/shanemhansen/ballclock)
