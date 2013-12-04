@@ -1,55 +1,59 @@
 Ball Clocks
 -----------
 
-Now there are a couple ways to look at ball clocks.
-They can be treated as polynomials, much in the same
-way 123 can, except they have a variable base, but a little
-linear algebra plus some finite fields can come in handy.
+I began this project coming up with a model of ball clocks that would allow me to
+accurately predict, based on the queue size, how long it takes the queue to reorder
+itself. I like to write it out:
 
-A ballclock is defined by both it's state and it's queue size
-It returns a result t where t is an element of the finite group
-of Z(720) under the operation of addition.
+Let's simulate
 
-The time t can be represented as a linear combination of the
-individual clock elements. Let x1 be the minutes (in Z(5), x2 be the minutes  / 5 (in Z(30)) 
-and x3 be the hours (in Z(12)). Then the time t in minutes is given as:
+    2,3
+    (1,2,3,4,5,6) () ()
+    (1,2,3,4,5) (6) ()
+    (6,1,2,3,4) () (5)
+    (6,1,2,3) (4) (5)
+    (4,6,1,2) () (5,3)
+    (4,6,1) (2) (5,3)
+    (1,3,5,2,4,6) () ()
 
-    t := x1 + 5*x2 + 60*x3
+I initially built a ball clock simulator around the type BallClock and the Tick() methods.
+The ball clock accurately simulated the motion and ordering of the balls through the machine.
+I've called this algorithm, unoriginally, "iterateminutes". It was enough to solve all the problems
+from 27 to 127 in about 8 seconds on my i7 CPU using goroutines. Consider this my naive solution.
+I am sorting the output because I'm using goroutines and waitgroups, so the output is non-deterministic.
+Also my timings were taken from pre-compiled versions of the bench program, not using go run.
 
-or, in simplified notation, 
-
-    let x⃗ = <x1, x2, x3> and c⃗ = <1, 5, 60>,
-
-then t is simply
-    
-    t = x⃗ · c⃗
-
-Now let's bring into play the balls β The minimum number
-of balls required to represent time is of course
-12 + 55/5 + 4, or 26. This gives us a time of 12:59 when the static hour ball is included.
-At 12:59, the system balls are all once again at the bottom in the queue.
-Let's examine out loud the order the balls go through the system.
-
-Every minute, the balls go from some configuration β to β′. There are a few observations we can make
-
-1. For each ball in the queue, it's position is advanced +1 every minute (1,2,3,4,5)
-2. For each ball in the minutes queue, it's position is advanced +1 unless
-it is the 5th minute. in that case, 4 balls run down the track in reverse order back to the *beginning* of the
-queue. Ball number 5 advances to the second track. This is called a carry
-3. The 12th ball carried over from the minutes track, returns 11 balls to the queue in reverse order,
-leaving only ball 12 to fall to the hours track
-3. The 12th ball carried over to the hours track causes 11 balls to return to the queue in reverse order, and then
-the 12th ball then falls falls into the to the queue.
+    go run bench/main.go -algo iterateminutes < test2.txt | sort -n
 
 
-Let's simulate:
-2,3
-(1,2,3,4,5,6) () ()
-(1,2,3,4,5) (6) ()
-(6,1,2,3,4) () (5)
-(6,1,2,3) (4) (5)
-(4,6,1,2) () (5,3)
-(4,6,1) (2) (5,3)
+Here comes the google, you can stop reading here if you want
+------------------------------------------------------------
 
-(1,3,5,2,4,6) () ()
->>>>>>> Initial commit
+It turns out that, as promised, ball clocks are a google'able thing. So after watching a few lego clocks
+online (which really helped in step 1). I came accross the original problem statement. I took away the key insight
+that every 12 hours the same permutation is applied to the balls, and then I left. This gave rise to my second
+strategy (permutedays), which solved the problem (27-127) in under .4 seconds. The strategy was pretty simple,
+use iterateminutes until I've obtained the permutation vector, and then permute day by day until I get back to
+the identity permutation (IsPristine()).
+
+    go run bench/main.go -algo permutedays < test2.txt | sort -n
+
+That's kind of a boring middle step. I do remember from my old abstract algebra classes that permutations of finite numbers
+can be written as a sequence of cycles. For example the permutation switch even and odd spots might look something like this:
+
+    (2,1)(4,3)(6,5)...
+
+It's clear that the period of this thing is 2 cycles. Now I didn't rigorously prove this, but it's a well known
+fact that the period of a permutation is the least common multiple of the individual cycles, which is pretty
+intuitive actually. That gave the final, simplest solution which completes almost instantly (well 14 milliseconds)
+
+    go run bench/main.go -algo lcm < test2.txt | sort -n
+
+Not bad, and a fun project. I'd like to talk about some of the pieces. The style was that I solved
+each problem invidiually, hence the existance of clock2, and clock3. I also used golang method receivers to
+do table driven testing of each algorithm against known data. Some commmon functionality around permutations
+was put in it's own file. the golang package layout makes this sort of flexible structure pretty easy.
+
+I also used the new go cover tool. We've got about 95% test coverage, I augment that with the actual deliverable (bench/main.go)
+which reads the numbers from stdin and outputs the messages.
+>>>>>>> Final commit, now with LCM, better docs, etc
