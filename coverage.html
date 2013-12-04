@@ -157,7 +157,7 @@ func (self *BallClock) IsPristine() bool <span class="cov8" title="1">{
 // State A to state B.
 func (self *BallClock) Tick() <span class="cov8" title="1">{
         // Simple counting algorithm, with a twist
-    // The base isn't consistantly 2, 16, or even something weird like 10 ; )
+        // The base isn't consistantly 2, 16, or even something weird like 10 ; )
         ball := self.queue[0]
         self.queue = self.queue[1:]
         rungnumber := 0
@@ -169,10 +169,10 @@ func (self *BallClock) Tick() <span class="cov8" title="1">{
                 }</span>
                 <span class="cov8" title="1">arm := self.rungs[rungnumber]
                 // Is there somewhere to put the ball on this rung,
-        // or will it trigger a carry?
+                // or will it trigger a carry?
                 for i, val := range arm </span><span class="cov8" title="1">{
                         if val == 0 </span><span class="cov8" title="1">{
-                // whoo! we found somewhere to put the ball
+                                // whoo! we found somewhere to put the ball
                                 arm[i] = ball
                                 return
                         }</span>
@@ -190,7 +190,7 @@ func (self *BallClock) Tick() <span class="cov8" title="1">{
                         *carry = 0</span>
                 }
                 // let's try the next arm.. unless we're out of rungs?
-        // good thing there's a check at the top for that,
+                // good thing there's a check at the top for that,
                 <span class="cov8" title="1">rungnumber++</span>
         }
         <span class="cov0" title="0">panic("Shouldn't get here")</span>
@@ -198,11 +198,11 @@ func (self *BallClock) Tick() <span class="cov8" title="1">{
 </pre>
 		
 		<pre class="file" id="file1" style="display: none">package ballclock
+
 // clock2 holds implementtion of the permuatedays algorithm
 type Day int
 
 var DAY Day = 24 * 60
-
 
 // Get the period, measured in days (24 hour permutations applied)
 func (self *BallClock) PeriodBySuccessivePermuations() int <span class="cov8" title="1">{
@@ -216,7 +216,7 @@ func (self *BallClock) PeriodBySuccessivePermuations() int <span class="cov8" ti
         <span class="cov8" title="1">return i</span>
 }
 
-// Return a permuted vector representing the 
+// Return a permuted vector representing the
 // changes made to the initial state. by ticks Resets BallClock
 func (self *BallClock) GetPermutationVector(needed_ticks Day) []int <span class="cov8" title="1">{
         for i := Day(0); i &lt; needed_ticks; i++ </span><span class="cov8" title="1">{
@@ -239,29 +239,6 @@ func (self *BallClock) GetPermutationVector(needed_ticks Day) []int <span class=
 		
 		<pre class="file" id="file2" style="display: none">package ballclock
 
-// The last and final solution relies on a bunch
-// of pretty basic undergrad level math
-// First: Every 24 hours the clock rearranges the
-// balls. This forms a permutation.
-// This fact alone allows us to iterate extremely
-// quickly over days instead of slowly over minutes,
-// simulating the progress of the clock, although
-// that's still handy for the derivation of the initial
-// permuation, but the clock need not be simulated
-// for more than 12 hours.
-// Second, permutations can be written as a series
-// of cycles. For example, the permuation that switches the
-// left and right positions of every other element would be
-// (a,b)(c,d)(....)
-// It's evident (and proven somewhere else) that if each of these
-// independant permutations are doing their own thing
-// the pattern will switch every 2 iterations.
-// It's not hard to see that in general, if a permutation
-// can be factored into n sequences of length n[i], then
-// the period of the permutation is the least common multiple
-// over n[i]. Lucily Euler has a fantastic algorithm for
-// determining the GCD of any 2 numbers, which is closely
-// related to the LCM. Euclids Algorithm is also highly efficient.
 // The solution to the problem now looks like:
 // 1. Model the clock
 // 2. Move the dial forward 24 hours (or 12 if you prefer)

@@ -1,6 +1,8 @@
 Ball Clocks
 -----------
 
+Based on the problem published here: http://www.chilton.com/~jimw/ballclk.html
+
 I began this project coming up with a model of ball clocks that would allow me to
 accurately predict, based on the queue size, how long it takes the queue to reorder
 itself. I like to write it out:
@@ -30,11 +32,11 @@ Here comes the google, you can stop reading here if you want
 ------------------------------------------------------------
 
 It turns out that, as promised, ball clocks are a google'able thing. So after watching a few lego clocks
-online (which really helped in step 1). I came accross the original problem statement. I took away the key insight
+online (which really helped in step 1). I came across the original problem statement. I took away the key insight
 that every 12 hours the same permutation is applied to the balls, and then I left. This gave rise to my second
 strategy (permutedays), which solved the problem (27-127) in under .4 seconds. The strategy was pretty simple,
 use iterateminutes until I've obtained the permutation vector, and then permute day by day until I get back to
-the identity permutation (IsPristine()).
+the identity permutation (BallClock.IsPristine()).
 
     go run bench/main.go -algo permutedays < test2.txt | sort -n
 
@@ -56,4 +58,3 @@ was put in it's own file. the golang package layout makes this sort of flexible 
 
 I also used the new go cover tool. We've got about 95% test coverage, I augment that with the actual deliverable (bench/main.go)
 which reads the numbers from stdin and outputs the messages.
->>>>>>> Final commit, now with LCM, better docs, etc

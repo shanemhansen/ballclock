@@ -38,7 +38,7 @@ github.com/shanemhansen/ballclock/clock2.go:36.2,37.12 2 1
 github.com/shanemhansen/ballclock/clock2.go:23.41,25.3 1 1
 github.com/shanemhansen/ballclock/clock2.go:28.32,30.3 1 0
 github.com/shanemhansen/ballclock/clock2.go:33.24,35.3 1 1
-github.com/shanemhansen/ballclock/clock3.go:48.42,52.2 3 1
+github.com/shanemhansen/ballclock/clock3.go:25.42,29.2 3 1
 github.com/shanemhansen/ballclock/permutation.go:5.55,6.36 1 1
 github.com/shanemhansen/ballclock/permutation.go:9.2,10.32 2 1
 github.com/shanemhansen/ballclock/permutation.go:13.2,13.15 1 1
