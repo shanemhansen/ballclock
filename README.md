@@ -56,5 +56,5 @@ each problem invidiually, hence the existance of clock2, and clock3. I also used
 do table driven testing of each algorithm against known data. Some commmon functionality around permutations
 was put in it's own file. the golang package layout makes this sort of flexible structure pretty easy.
 
-I also used the new go cover tool. We've got about 95% test coverage, I augment that with the actual deliverable (bench/main.go)
+I also used the new go cover tool. We've got about [95% test coverage](http://shanemhansen.github.io/ballclock/coverage.html), I augment that with the actual deliverable (bench/main.go)
 which reads the numbers from stdin and outputs the messages.
