@@ -8,9 +8,22 @@ import "bufio"
 import "io"
 import "strconv"
 
+import "flag"
+
+var algo string
 func main() {
+    flag.StringVar(&algo, "algo", "iterateminutes", "algorithm iterateminutes|permutedays|lcm")
+    strategies := map[string]func(*ballclock.BallClock)int{
+        "iterateminutes": (*ballclock.BallClock).Period,
+        "permutedays": (*ballclock.BallClock).PeriodBySuccessivePermuations}
+    flag.Parse()
+    strategy := strategies[algo]
+    if strategy == nil {
+        panic(algo + " is not a valid strategy")
+    }
     w := bufio.NewReader(os.Stdin)
     data := make([]int, 0, 4)
+    
     for {
         line, err := w.ReadString('\n')
         if err == io.EOF {
@@ -35,7 +48,7 @@ func main() {
                 //per spec, skip                
                 return
             }
-            i := clock.Period()
+            i := strategy(clock)
             results <- [2]int{period, i}
         }(j)
     }

@@ -24,6 +24,8 @@ type BallClock struct {
     arms [][]int
     pristineQueue []int
 }
+
+// Initializes/Reinitializes a BallClock
 func New(template *BallClock) (*BallClock, error) {
     template.queue = make([]int, template.QueueSize)
     template.pristineQueue = make([]int, template.QueueSize)
@@ -47,7 +49,7 @@ func New(template *BallClock) (*BallClock, error) {
 func (self *BallClock) Period() int {
     var i int
     self.Tick()
-    for i=0; !self.IsPristine(); i++ {
+    for i=1; !self.IsPristine(); i++ {
         self.Tick()
     }
     return i
