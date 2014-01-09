@@ -1,121 +1,83 @@
-// A ballclock represents a set of 3 rungs
-// The first rung represents minutes
-// The second 5 minute increments
-// and the last, 1 hour increments
-// In the general case, the state of a ball clock
-// can be defined as a polynomial using a variable base
-// (10/1, 60/5, 12/1) or (10, 2, 12)
-// We can defined a function t(x1, x2, x3) where
-// t is time in minutes, x1 is minutes, x2 is sets of minutes
-// and x3 is hours. as t(x1, x2, x3) = x1 + 5*x2 + 60*x3
-// where  x1 ∈ [0..9], x2 ∈ [0..11], x3 ∈ [0..11]
 package ballclock
 
-import "errors"
+import "fmt"
 
-// If you want to run the full 24 hours, you got to have enough balls
-var InvalidClock error = errors.New("Invalid clock, not enough balls!")
+var _ fmt.Stringer
 
-//General polynomial type
-type Polynomial []int
-
-// Ballclock is a specific type of polynomial
-type BallClock struct {
-	Polynomial
-	QueueSize     int
-	queue         []int
-	rungs         [][]int
-	pristineQueue []int
+type Clock struct {
+	queuesize int
+	queue     []int
+	arm1pos   int
+	arm1      [4]int
+	arm2pos   int
+	arm2      [11]int
+	arm3pos   int
+	arm3      [11]int
 }
 
-// Initializes/Reinitializes a BallClock, use to reset queue, etc.
-func New(template *BallClock) (*BallClock, error) {
-	template.queue = make([]int, template.QueueSize)
-	template.pristineQueue = make([]int, template.QueueSize)
-	for i := 0; i < template.QueueSize; i++ {
-		template.queue[i] = i + 1
+func New(queuesize int) *Clock {
+	q := make([]int, queuesize)
+	for i := 0; i < queuesize; i++ {
+		q[i] = i + 1
 	}
-	copy(template.pristineQueue, template.queue)
-	required := 0
-	for _, size := range template.Polynomial {
-		required += size
-		template.rungs = append(template.rungs, make([]int, size))
+	return &Clock{
+		queuesize: queuesize,
+		queue:     q,
 	}
-	if template.QueueSize < required {
-		return nil, InvalidClock
-	}
-	return template, nil
 }
-
-// Determine the Period of a wall clock before
-// the balls go back into original order.
-// this is the "iterateminutes" algo
-func (self *BallClock) Period() int {
-	var i int
-	self.Tick()
-	for i = 1; !self.IsPristine(); i++ {
-		self.Tick()
-	}
-	return (i / (24 * 60))
-}
-
-// helper function to dump the state of simulation
-func (self *BallClock) State() ([]int, [][]int) {
-	return self.queue, self.rungs
-}
-
-// Are the balls back in order?
-func (self *BallClock) IsPristine() bool {
-	if len(self.pristineQueue) != len(self.queue) {
-		return false
-	}
-	for i, pristine := range self.pristineQueue {
-		if self.queue[i] != pristine {
-			return false
-		}
-	}
-	return true
-}
-
-// Fundamental operation to advance the ball clock from
-// State A to state B.
-func (self *BallClock) Tick() {
-	// Simple counting algorithm, with a twist
-	// The base isn't consistantly 2, 16, or even something weird like 10 ; )
-	ball := self.queue[0]
-	self.queue = self.queue[1:]
-	rungnumber := 0
+func (c *Clock) Period() int {
+	i := 0
+TICK:
 	for {
-		if rungnumber == len(self.rungs) {
-			// Put the ball back in the queue, at the end
-			self.queue = append(self.queue, ball)
-			return
+		i++
+		ball := c.queue[0]
+		c.queue = c.queue[1:]
+		// 1 minute
+		if c.arm1pos != len(c.arm1) {
+			c.arm1[c.arm1pos] = ball
+			c.arm1pos++
+			continue
 		}
-		arm := self.rungs[rungnumber]
-		// Is there somewhere to put the ball on this rung,
-		// or will it trigger a carry?
-		for i, val := range arm {
-			if val == 0 {
-				// whoo! we found somewhere to put the ball
-				arm[i] = ball
-				return
+		c.arm1pos = 0
+		c.queue = append(
+			c.queue, c.arm1[3], c.arm1[2], c.arm1[1], c.arm1[0],
+		)
+		// 5 minute
+		if c.arm2pos != len(c.arm2) {
+			c.arm2[c.arm2pos] = ball
+			c.arm2pos++
+			continue
+		}
+		c.arm2pos = 0
+		c.queue = append(
+			c.queue,
+			c.arm2[10], c.arm2[9], c.arm2[8],
+			c.arm2[7], c.arm2[6], c.arm2[5], c.arm2[4],
+			c.arm2[3], c.arm2[2], c.arm2[1], c.arm2[0],
+		)
+		// 1 hour
+		if c.arm3pos != len(c.arm3) {
+			c.arm3[c.arm3pos] = ball
+			c.arm3pos++
+			continue
+		}
+		c.arm3pos = 0
+		c.queue = append(
+			c.queue,
+			c.arm3[10], c.arm3[9], c.arm3[8],
+			c.arm3[7], c.arm3[6], c.arm3[5], c.arm3[4],
+			c.arm3[3], c.arm3[2], c.arm3[1], c.arm3[0],
+			ball,
+		)
+		if len(c.queue) == c.queuesize {
+			// Could be...
+			for i, k := range c.queue {
+				if i+1 != k {
+					continue TICK
+				}
 			}
+			return i / (24 * 60)
 		}
-		// uhoh, nowhere to put the ball
-		// time to carry, loop over rung backwards
-		// empyting it out and placing the results
-		// in the queue
-		for i, _ := range arm {
-			carry := &arm[len(arm)-i-1]
-			if *carry == 0 {
-				panic("Attempt to carry null (0) ball, something went horribly wrong")
-			}
-			self.queue = append(self.queue, *carry)
-			*carry = 0
-		}
-		// let's try the next arm.. unless we're out of rungs?
-		// good thing there's a check at the top for that,
-		rungnumber++
+
 	}
-	panic("Shouldn't get here")
 }
